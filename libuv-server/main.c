@@ -3,7 +3,6 @@
 #include <string.h>
 #include <uv.h>
 
-#define DEFAULT_PORT 8000
 #define DEFAULT_BACKLOG 128
 
 uv_loop_t *loop;
@@ -60,10 +59,8 @@ void on_new_connection(uv_stream_t *server, int status) {
     printf("New connection\n");
     if (status < 0) {
         fprintf(stderr, "New connection error %s\n", uv_strerror(status));
-        // error!
         return;
     }
-
     uv_tcp_t *client = (uv_tcp_t *) malloc(sizeof(uv_tcp_t));
     uv_tcp_init(loop, client);
     if (uv_accept(server, (uv_stream_t *) client) == 0) {
@@ -74,18 +71,28 @@ void on_new_connection(uv_stream_t *server, int status) {
     }
 }
 
-int main() {
-    loop = uv_default_loop();
+int main(int argc, char **argv) {
+    if (argc < 3) {
+        fprintf(stderr,
+                "Nicht genug Argumente. Erstes Argument muss die Addresse sein, zweites Argument der Port. Z.B. 127.0.0.1 8000\n");
+        return 1;
+    }
+    const char *address = argv[0];
+    int port;
+    if (sscanf(argv[2], "%d", &port) == EOF) {
+        fprintf(stderr, "Argument %s ist kein korrekter Port\n", argv[1]);
+        return 1;
+    }
 
+    loop = uv_default_loop();
     uv_tcp_t server;
     uv_tcp_init(loop, &server);
-
-    uv_ip4_addr("0.0.0.0", DEFAULT_PORT, &addr);
-
+    printf("Start TCP Server %s:%d\n", address, port);
+    uv_ip4_addr(address, port, &addr);
     uv_tcp_bind(&server, (const struct sockaddr *) &addr, 0);
-    int r = uv_listen((uv_stream_t *) &server, DEFAULT_BACKLOG, on_new_connection);
-    if (r) {
-        fprintf(stderr, "Listen error %s\n", uv_strerror(r));
+    int result = uv_listen((uv_stream_t *) &server, DEFAULT_BACKLOG, on_new_connection);
+    if (result) {
+        fprintf(stderr, "Listen error %s\n", uv_strerror(result));
         return 1;
     }
     return uv_run(loop, UV_RUN_DEFAULT);
