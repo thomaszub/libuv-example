@@ -25,30 +25,27 @@ void alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
 }
 
 void on_close(uv_handle_t *handle) {
-    printf("Closing connection\n");
+    printf("Verbindung geschlossen\n");
     free(handle);
 }
 
 void echo_write(uv_write_t *req, int status) {
-    printf("Writing response\n");
     if (status) {
-        fprintf(stderr, "Write error %s\n", uv_strerror(status));
+        fprintf(stderr, "Fehler beim Schreiben: %s\n", uv_strerror(status));
     }
     free_write_req(req);
 }
 
 void echo_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
     if (nread > 0) {
-        printf("Reading request\n");
         write_req_t *req = (write_req_t *) malloc(sizeof(write_req_t));
         req->buf = uv_buf_init(buf->base, nread);
         uv_write((uv_write_t *) req, client, &req->buf, 1, echo_write);
         return;
     }
     if (nread < 0) {
-        printf("Reading request done\n");
         if (nread != UV_EOF)
-            fprintf(stderr, "Read error %s\n", uv_err_name(nread));
+            fprintf(stderr, "Fehler beim Lesen: %s\n", uv_err_name(nread));
         uv_close((uv_handle_t *) client, on_close);
     }
 
@@ -56,18 +53,19 @@ void echo_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
 }
 
 void on_new_connection(uv_stream_t *server, int status) {
-    printf("New connection\n");
     if (status < 0) {
         fprintf(stderr, "Verbindungsfehler: %s\n", uv_strerror(status));
         return;
     }
     uv_tcp_t *client = (uv_tcp_t *) malloc(sizeof(uv_tcp_t));
     uv_tcp_init(loop, client);
-    if (uv_accept(server, (uv_stream_t *) client) == 0) {
-        printf("Start reading\n");
-        uv_read_start((uv_stream_t *) client, alloc_buffer, echo_read);
-    } else {
+    int error = uv_accept(server, (uv_stream_t *) client);
+    if (error) {
+        fprintf(stderr, "Neue Verbindung nicht akzeptiert: %s\n", uv_strerror(error));
         uv_close((uv_handle_t *) client, on_close);
+    } else {
+        printf("Neue Verbindung akzeptiert\n");
+        uv_read_start((uv_stream_t *) client, alloc_buffer, echo_read);
     }
 }
 
@@ -90,9 +88,9 @@ int main(int argc, char **argv) {
     printf("Start TCP Server %s:%d\n", address, port);
     uv_ip4_addr(address, port, &addr);
     uv_tcp_bind(&server, (const struct sockaddr *) &addr, 0);
-    int result = uv_listen((uv_stream_t *) &server, DEFAULT_BACKLOG, on_new_connection);
-    if (result) {
-        fprintf(stderr, "Fehler beim Hoeren auf Verbindungen: %s\n", uv_strerror(result));
+    int error = uv_listen((uv_stream_t *) &server, DEFAULT_BACKLOG, on_new_connection);
+    if (error) {
+        fprintf(stderr, "Fehler beim Hoeren auf Verbindungen: %s\n", uv_strerror(error));
         return 1;
     }
     return uv_run(loop, UV_RUN_DEFAULT);
