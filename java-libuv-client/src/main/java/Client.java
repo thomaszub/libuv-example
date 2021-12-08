@@ -1,6 +1,8 @@
 import java.io.*;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.time.Duration;
 
 public class Client implements Closeable {
 
@@ -10,11 +12,9 @@ public class Client implements Closeable {
 
     private final BufferedReader reader;
 
-    public Client(InetAddress address, int port) throws IOException {
-        this.socket = new Socket(address, port);
-        if (!socket.isConnected()) {
-            throw new IOException(String.format("Konnte keine Verbindung zum Server %s:%d herstellen", address, port));
-        }
+    public Client(InetAddress address, int port, Duration timeout) throws IOException {
+        this.socket = new Socket();
+        this.socket.connect(new InetSocketAddress(address, port), Math.toIntExact(timeout.toMillis()));
         this.writer = new PrintWriter(socket.getOutputStream(), true);
         this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
