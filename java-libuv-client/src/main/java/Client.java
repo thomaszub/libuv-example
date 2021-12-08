@@ -15,6 +15,7 @@ public class Client implements Closeable {
     public Client(InetAddress address, int port, Duration timeout) throws IOException {
         this.socket = new Socket();
         this.socket.connect(new InetSocketAddress(address, port), Math.toIntExact(timeout.toMillis()));
+        socket.setKeepAlive(true);
         this.writer = new PrintWriter(socket.getOutputStream(), true);
         this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
