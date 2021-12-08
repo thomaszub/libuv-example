@@ -1,3 +1,5 @@
+package one.zub.java_libuv_client;
+
 import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
