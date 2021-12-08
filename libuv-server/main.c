@@ -58,7 +58,7 @@ void echo_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
 void on_new_connection(uv_stream_t *server, int status) {
     printf("New connection\n");
     if (status < 0) {
-        fprintf(stderr, "New connection error %s\n", uv_strerror(status));
+        fprintf(stderr, "Verbindungsfehler: %s\n", uv_strerror(status));
         return;
     }
     uv_tcp_t *client = (uv_tcp_t *) malloc(sizeof(uv_tcp_t));
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
                 "Nicht genug Argumente. Erstes Argument muss die Addresse sein, zweites Argument der Port. Z.B. 127.0.0.1 8000\n");
         return 1;
     }
-    const char *address = argv[0];
+    const char *address = argv[1];
     int port;
     if (sscanf(argv[2], "%d", &port) == EOF) {
         fprintf(stderr, "Argument %s ist kein korrekter Port\n", argv[1]);
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     uv_tcp_bind(&server, (const struct sockaddr *) &addr, 0);
     int result = uv_listen((uv_stream_t *) &server, DEFAULT_BACKLOG, on_new_connection);
     if (result) {
-        fprintf(stderr, "Listen error %s\n", uv_strerror(result));
+        fprintf(stderr, "Fehler beim Hoeren auf Verbindungen: %s\n", uv_strerror(result));
         return 1;
     }
     return uv_run(loop, UV_RUN_DEFAULT);
