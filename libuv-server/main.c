@@ -29,18 +29,31 @@ void on_close(uv_handle_t *handle) {
     free(handle);
 }
 
-void echo_write(uv_write_t *req, int status) {
+void on_write_done(uv_write_t *req, int status) {
     if (status) {
         fprintf(stderr, "Fehler beim Schreiben: %s\n", uv_strerror(status));
     }
     free_write_req(req);
 }
 
-void echo_read(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
+void on_read_started(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
     if (nread > 0) {
+        char *message = malloc((nread + 1) * sizeof(char));
+        const char sep[1] = "#";
+        memcpy(message, buf->base, nread);
+        message[nread] = '\0';
+        printf("Message: %s", message);
+        char *token = strtok(message, sep);
+        while (token != NULL) {
+            printf("%s\n", token);
+            token = strtok(NULL, sep);
+        }
+
         write_req_t *req = (write_req_t *) malloc(sizeof(write_req_t));
         req->buf = uv_buf_init(buf->base, nread);
-        uv_write((uv_write_t *) req, client, &req->buf, 1, echo_write);
+        uv_write((uv_write_t *) req, client, &req->buf, 1, on_write_done);
+
+        free(message);
         return;
     }
     if (nread < 0) {
@@ -65,7 +78,7 @@ void on_new_connection(uv_stream_t *server, int status) {
         uv_close((uv_handle_t *) client, on_close);
     } else {
         printf("Neue Verbindung akzeptiert\n");
-        uv_read_start((uv_stream_t *) client, alloc_buffer, echo_read);
+        uv_read_start((uv_stream_t *) client, alloc_buffer, on_read_started);
     }
 }
 
